@@ -3,14 +3,15 @@ import {
   Action,
   EventStoreParams,
   MaybePromise,
-  PostMiddleWare,
-  PreMiddleWare,
+  OnBeforeAction,
+  OnAfterAction,
+  ExtendAction,
 } from "./useEventStore.types";
 
 export function useEventStore<A extends Action, T>({
   initialState,
   initialReducers,
-}: EventStoreParams<A, T>) {
+}: EventStoreParams<ExtendAction<A>, T>) {
   const [state, setState] = useState<T>(initialState);
   const stateRef = useRef<T>(initialState);
   const getState = useRef(() => stateRef.current);
@@ -23,8 +24,8 @@ export function useEventStore<A extends Action, T>({
 
   const middlewareActionTypeMap = useMemo(
     () => ({
-      [PostMiddleWare]: "post-middleware-" + generateRandomString(),
-      [PreMiddleWare]: "pre-middleware-" + generateRandomString(),
+      [OnBeforeAction]: "on-before-middleware-" + generateRandomString(),
+      [OnAfterAction]: "on-after-middleware-" + generateRandomString(),
     }),
     []
   );
@@ -40,7 +41,7 @@ export function useEventStore<A extends Action, T>({
       );
 
       target.current.dispatchEvent(
-        new CustomEvent(middlewareActionTypeMap[PreMiddleWare], {
+        new CustomEvent(middlewareActionTypeMap[OnAfterAction], {
           detail: action,
         })
       );
@@ -56,15 +57,15 @@ export function useEventStore<A extends Action, T>({
     <ActionForListener extends A = A>(
       type:
         | ActionForListener["type"]
-        | typeof PostMiddleWare
-        | typeof PreMiddleWare,
+        | typeof OnBeforeAction
+        | typeof OnAfterAction,
       reducer: (
         getState: () => T,
         action: ActionForListener,
         dispatch: Dispatch
       ) => MaybePromise<T>
     ) => {
-      if (type === PostMiddleWare || type === PreMiddleWare) {
+      if (type === OnBeforeAction || type === OnAfterAction) {
         type = middlewareActionTypeMap[type];
       }
 
@@ -76,8 +77,9 @@ export function useEventStore<A extends Action, T>({
           setState(result);
 
           if (!/^pre/.test(event.type)) {
+            // Do not run on-after for pre actions
             target.current.dispatchEvent(
-              new CustomEvent(middlewareActionTypeMap[PostMiddleWare], {
+              new CustomEvent(middlewareActionTypeMap[OnBeforeAction], {
                 detail: event.detail,
               })
             );
@@ -102,29 +104,29 @@ export function useEventStore<A extends Action, T>({
     [dispatch]
   );
 
-  const removeReducer = useCallback(
-    <RemoveListenerAction extends A = A>(
-      type: RemoveListenerAction["type"],
-      listener: EventListener
-    ) => {
-      target.current.removeEventListener(type, listener);
-    },
-    []
-  );
+  // const removeReducer = useCallback(
+  //   <RemoveListenerAction extends A = A>(
+  //     type: RemoveListenerAction["type"],
+  //     listener: EventListener
+  //   ) => {
+  //     target.current.removeEventListener(type, listener);
+  //   },
+  //   []
+  // );
 
   if (!isInitReducersSet.current && initialReducers) {
     const reducersObject = Object.assign({}, initialReducers);
 
-    if (reducersObject[PostMiddleWare]) {
+    if (reducersObject[OnBeforeAction]) {
       Object.assign(reducersObject, {
-        [middlewareActionTypeMap[PostMiddleWare]]:
-          reducersObject[PostMiddleWare],
+        [middlewareActionTypeMap[OnBeforeAction]]:
+          reducersObject[OnBeforeAction],
       });
     }
 
-    if (reducersObject[PreMiddleWare]) {
+    if (reducersObject[OnAfterAction]) {
       Object.assign(reducersObject, {
-        [middlewareActionTypeMap[PreMiddleWare]]: reducersObject[PreMiddleWare],
+        [middlewareActionTypeMap[OnAfterAction]]: reducersObject[OnAfterAction],
       });
     }
 
@@ -150,7 +152,7 @@ export function useEventStore<A extends Action, T>({
   return {
     state,
     dispatch,
-    addReducer,
-    removeReducer,
+    // addReducer,
+    // removeReducer,
   };
 }

@@ -23,7 +23,4 @@ export type Actions =
       payload: {
         value: string;
       };
-    }
-  | {
-      type: "preUpdatePage1";
     };

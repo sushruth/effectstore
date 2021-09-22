@@ -1,6 +1,6 @@
 import { createContainer } from "unstated-next";
 import { useEventStore } from "../effectStore/useEventStore";
-import { InitialReducers, PostMiddleWare, PreMiddleWare } from "../effectStore/useEventStore.types";
+import { InitialReducers, OnBeforeAction, OnAfterAction, ExtendAction } from "../effectStore/useEventStore.types";
 import { Actions, AppState } from "./AppState.types";
 
 const initialState: AppState = {
@@ -12,7 +12,7 @@ const initialState: AppState = {
   },
 };
 
-const initialReducers: InitialReducers<Actions, AppState> = {
+const initialReducers: InitialReducers<ExtendAction<Actions>, AppState> = {
   UpdatePage1: [
     async (getState, action) => {
       await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -41,14 +41,14 @@ const initialReducers: InitialReducers<Actions, AppState> = {
       }
     }
   ],
-  [PreMiddleWare] :[
-    async (getState) => {
-      console.log("pre middleware - ", getState());
+  [OnAfterAction] :[
+    async (getState, action) => {
+      console.log("before action - ", action.type, getState());
     }
   ],
-  [PostMiddleWare] :[
-    async (getState) => {
-      console.log("post middleware - ", getState());
+  [OnBeforeAction] :[
+    async (getState, action) => {
+      console.log("after action - ", action.type, getState());
     }
   ]
 };
